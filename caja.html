@@ -9,7 +9,10 @@
 </head>
 <body>
   <header class="main-header">
-    <h1>Terminal de Caja</h1>
+    <div class="header-left">
+      <img src="https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png" alt="SIBRÜ" class="header-logo">
+      <h1>Terminal de Caja</h1>
+    </div>
     <div class="header-info">
       <select id="selector-cajero"></select>
       <span id="estado-red" class="status-online">🟢 En línea</span>
@@ -34,11 +37,15 @@
           <input type="number" id="precio" step="0.01" min="0">
         </div>
       </div>
+      <button id="btn-agregar" class="btn-agregar">AGREGAR (Enter)</button>
     </section>
 
     <!-- Sección del Carrito -->
     <section class="panel-carrito">
-      <h3>Detalle de Venta</h3>
+      <div class="carrito-header">
+        <h3>Detalle de Venta</h3>
+        <img src="https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png" alt="" class="marca-agua">
+      </div>
       <table class="tabla-carrito">
         <thead>
           <tr>
@@ -71,7 +78,6 @@
 
   <script type="module" src="js/main-caja.js"></script>
   <script>
-    // Atajo de teclado F2 para cobrar
     document.addEventListener('keydown', (e) => {
       if (e.key === 'F2') {
         e.preventDefault();
@@ -79,7 +85,6 @@
       }
     });
 
-    // Detector simple de conexión
     window.addEventListener('online', () => document.getElementById('estado-red').textContent = '🟢 En línea');
     window.addEventListener('offline', () => document.getElementById('estado-red').textContent = '🔴 Sin conexión');
   </script>

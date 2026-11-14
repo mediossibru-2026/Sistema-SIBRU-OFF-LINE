@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caja - Grupo SIBRÜ</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/caja.css">
+</head>
+<body>
+  <header class="main-header">
+    <h1>Terminal de Caja</h1>
+    <div class="header-info">
+      <select id="selector-cajero"></select>
+      <span id="estado-red" class="status-online">🟢 En línea</span>
+    </div>
+  </header>
+
+  <main class="caja-container">
+    <!-- Sección de Entrada -->
+    <section class="panel-entrada">
+      <div class="form-group">
+        <label>Producto (Clave o Nombre)</label>
+        <input type="text" id="busqueda" autocomplete="off" placeholder="Escribe y presiona Enter...">
+        <div id="sugerencias" class="sugerencias-box"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cantidad</label>
+          <input type="number" id="cantidad" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Precio Unitario ($)</label>
+          <input type="number" id="precio" step="0.01" min="0">
+        </div>
+      </div>
+    </section>
+
+    <!-- Sección del Carrito -->
+    <section class="panel-carrito">
+      <h3>Detalle de Venta</h3>
+      <table class="tabla-carrito">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Cant.</th>
+            <th>Precio</th>
+            <th>Importe</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="carrito-body">
+          <!-- Items se inyectan aquí -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Sección de Cobro -->
+    <section class="panel-cobro">
+      <div class="form-group">
+        <label>Forma de Pago</label>
+        <select id="selector-pago"></select>
+      </div>
+      <div class="total-display">
+        <span>TOTAL:</span>
+        <span id="total-venta">$0.00</span>
+      </div>
+      <button id="btn-cobrar" class="btn-cobrar">COBRAR E IMPRIMIR (F2)</button>
+    </section>
+  </main>
+
+  <script type="module" src="js/main-caja.js"></script>
+  <script>
+    // Atajo de teclado F2 para cobrar
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        document.getElementById('btn-cobrar').click();
+      }
+    });
+
+    // Detector simple de conexión
+    window.addEventListener('online', () => document.getElementById('estado-red').textContent = '🟢 En línea');
+    window.addEventListener('offline', () => document.getElementById('estado-red').textContent = '🔴 Sin conexión');
+  </script>
+</body>
+</html>

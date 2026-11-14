@@ -8,6 +8,8 @@ import { cargarSeedDesdeExcel } from './seed.js';
 
 const app = initializeApp(firebaseConfig);
 let productoSeleccionado = null;
+let indiceSeleccionado = -1;
+let resultadosActuales = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initDB();
@@ -36,22 +38,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (termino.length < 2) {
       listaSugerencias.innerHTML = '';
       productoSeleccionado = null;
+      indiceSeleccionado = -1;
+      resultadosActuales = [];
       return;
     }
 
     const resultados = await buscarProducto(termino);
+    resultadosActuales = resultados;
+    indiceSeleccionado = -1;
     listaSugerencias.innerHTML = '';
 
     if (resultados.length === 1 && resultados[0].clave === termino) {
       seleccionarProducto(resultados[0]);
     } else {
-      resultados.forEach(p => {
+      resultados.forEach((p, idx) => {
         const div = document.createElement('div');
         div.className = 'sugerencia-item';
         div.textContent = `[${p.clave}] ${p.nombre} (${p.unidad})`;
         div.onclick = () => seleccionarProducto(p);
         listaSugerencias.appendChild(div);
       });
+    }
+  });
+
+  // Navegación con flechas en el dropdown
+  inputBusqueda.addEventListener('keydown', (e) => {
+    const items = listaSugerencias.querySelectorAll('.sugerencia-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      indiceSeleccionado = (indiceSeleccionado + 1) % items.length;
+      actualizarSeleccionVisual(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      indiceSeleccionado = (indiceSeleccionado - 1 + items.length) % items.length;
+      actualizarSeleccionVisual(items);
+    } else if (e.key === 'Enter' && indiceSeleccionado >= 0) {
+      e.preventDefault();
+      const producto = resultadosActuales[indiceSeleccionado];
+      if (producto) {
+        seleccionarProducto(producto);
+      }
     }
   });
 
@@ -70,7 +98,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Botón Agregar explícito
-  document.getElementById('btn-agregar').addEventListener('click', ejecutarAgregar);
+  document.getElementById('btn-agregar').addEventListener('click', (e) => {
+    e.preventDefault();
+    ejecutarAgregar();
+  });
 
   document.getElementById('btn-cobrar').addEventListener('click', () => {
     const cajero = document.getElementById('selector-cajero').value;
@@ -78,6 +109,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     procesarVenta(cajero, formaPago);
   });
 });
+
+function actualizarSeleccionVisual(items) {
+  items.forEach((item, idx) => {
+    if (idx === indiceSeleccionado) {
+      item.classList.add('selected');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+}
 
 function ejecutarAgregar() {
   if (!productoSeleccionado) {
@@ -105,6 +147,7 @@ function seleccionarProducto(p) {
   productoSeleccionado = p;
   document.getElementById('busqueda').value = `[${p.clave}] ${p.nombre}`;
   document.getElementById('sugerencias').innerHTML = '';
+  indiceSeleccionado = -1;
 
   const inputCantidad = document.getElementById('cantidad');
   inputCantidad.value = p.unidad === 'KG' ? '0.00' : '1';

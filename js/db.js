@@ -4,18 +4,16 @@ import { APP_CONFIG } from './config.js';
 
 export const db = new Dexie('SibruTicketDB');
 
-// Definición de tablas e índices para búsquedas rápidas
 db.version(1).stores({
-  products: 'clave, nombre, linea, activo', // Índice compuesto para autocompletado
+  products: 'clave, nombre, linea, activo',
   tickets: 'folio, fecha, cajeroId, synced',
-  syncQueue: '++id, ticketFolio, timestamp, status', // Cola de sincronización
-  settings: 'key' // Almacena folioActual, formasPago, logoBase64
+  syncQueue: '++id, ticketFolio, timestamp, status',
+  settings: 'key'
 });
 
-// Inicializa valores por defecto si es la primera vez que se abre
 export async function initDB() {
-  const settingsCount = await db.settings.count();
-  if (settingsCount === 0) {
+  const count = await db.settings.count();
+  if (count === 0) {
     await db.settings.bulkPut([
       { key: 'folioActual', value: APP_CONFIG.folioInicial - 1 },
       { key: 'formasPago', value: APP_CONFIG.formasPagoDefault },
@@ -24,9 +22,9 @@ export async function initDB() {
   }
 }
 
-// Función para cargar el catálogo inicial (se ejecuta desde el Admin o primera vez en Caja)
-export async function seedProducts(productsArray) {
+// Función auxiliar para cargar el seed inicial (usar solo una vez desde la consola o admin)
+export async function cargarSeedProductos(productsArray) {
   await db.products.clear();
   await db.products.bulkPut(productsArray);
-  console.log(`${productsArray.length} productos cargados en IndexedDB`);
+  console.log(`✅ ${productsArray.length} productos cargados en IndexedDB`);
 }

@@ -6,37 +6,28 @@ import { buscarProducto } from './catalog.js';
 import { agregarAlCarrito, procesarVenta, renderizarCarrito } from './pos.js';
 import { cargarSeedDesdeExcel } from './seed.js';
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-
-// Estado local de la UI
 let productoSeleccionado = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Inicializar IndexedDB
   await initDB();
 
-  // 2. Carga automática del catálogo la primera vez
   const totalProductos = await db.products.count();
   if (totalProductos === 0) {
     try {
-      console.log('⏳ Primera ejecución: cargando catálogo desde articulos.xlsx...');
+      console.log('⏳ Primera ejecución: cargando catálogo...');
       const n = await cargarSeedDesdeExcel();
       console.log(`✅ Catálogo cargado: ${n} productos`);
     } catch (e) {
-      console.warn('⚠️ No se pudo cargar el catálogo automático:', e);
+      console.warn('⚠️ No se pudo cargar el catálogo:', e);
     }
   } else {
     console.log(`✅ Catálogo local existente: ${totalProductos} productos`);
   }
 
-  // 3. Cargar cajeros y formas de pago
   cargarCajerosYFormasPago();
-
-  // 4. Enfocar búsqueda al iniciar
   document.getElementById('busqueda').focus();
 
-  // 5. Listener de búsqueda (autocompletado en tiempo real)
   const inputBusqueda = document.getElementById('busqueda');
   const listaSugerencias = document.getElementById('sugerencias');
 
@@ -51,7 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resultados = await buscarProducto(termino);
     listaSugerencias.innerHTML = '';
 
-    // Si hay coincidencia exacta por clave, seleccionar automáticamente
     if (resultados.length === 1 && resultados[0].clave === termino) {
       seleccionarProducto(resultados[0]);
     } else {
@@ -65,7 +55,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 6. Listener para campo cantidad (salto con Enter)
   document.getElementById('cantidad').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -73,26 +62,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 7. Listener para campo precio (agregar con Enter)
-  document.getElementById('precio').addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter' && productoSeleccionado) {
+  document.getElementById('precio').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      const cant = parseFloat(document.getElementById('cantidad').value) || 1;
-      const prec = parseFloat(document.getElementById('precio').value) || 0;
-
-      agregarAlCarrito(productoSeleccionado, cant, prec);
-
-      // Resetear campos y volver a enfocar búsqueda
-      productoSeleccionado = null;
-      inputBusqueda.value = '';
-      document.getElementById('cantidad').value = '';
-      document.getElementById('precio').value = '';
-      listaSugerencias.innerHTML = '';
-      inputBusqueda.focus();
+      ejecutarAgregar();
     }
   });
 
-  // 8. Listener botón cobrar
+  // Botón Agregar explícito
+  document.getElementById('btn-agregar').addEventListener('click', ejecutarAgregar);
+
   document.getElementById('btn-cobrar').addEventListener('click', () => {
     const cajero = document.getElementById('selector-cajero').value;
     const formaPago = document.getElementById('selector-pago').value;
@@ -100,7 +79,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// Función para seleccionar un producto del autocompletador
+function ejecutarAgregar() {
+  if (!productoSeleccionado) {
+    alert('Selecciona un producto primero');
+    return;
+  }
+  const cant = parseFloat(document.getElementById('cantidad').value) || 1;
+  const prec = parseFloat(document.getElementById('precio').value) || 0;
+  
+  if (prec <= 0) {
+    alert('Ingresa un precio válido');
+    return;
+  }
+
+  agregarAlCarrito(productoSeleccionado, cant, prec);
+  productoSeleccionado = null;
+  document.getElementById('busqueda').value = '';
+  document.getElementById('cantidad').value = '';
+  document.getElementById('precio').value = '';
+  document.getElementById('sugerencias').innerHTML = '';
+  document.getElementById('busqueda').focus();
+}
+
 function seleccionarProducto(p) {
   productoSeleccionado = p;
   document.getElementById('busqueda').value = `[${p.clave}] ${p.nombre}`;
@@ -112,9 +112,7 @@ function seleccionarProducto(p) {
   inputCantidad.select();
 }
 
-// Cargar cajeros y formas de pago desde config y IndexedDB
 async function cargarCajerosYFormasPago() {
-  // Cajeros
   const cajeros = APP_CONFIG.cajeros || [{ nombre: "Nyx" }, { nombre: "Sarahi" }];
   const selCajero = document.getElementById('selector-cajero');
   cajeros.forEach(c => {
@@ -124,7 +122,6 @@ async function cargarCajerosYFormasPago() {
     selCajero.appendChild(opt);
   });
 
-  // Formas de pago
   const formas = await db.settings.get('formasPago');
   const formasPago = formas ? formas.value : APP_CONFIG.formasPagoDefault;
   const selPago = document.getElementById('selector-pago');

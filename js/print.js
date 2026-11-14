@@ -29,7 +29,7 @@ export function imprimirTicket(ticket) {
   });
 
   const logoImg = ticket.logoBase64
-    ? `<img src="${ticket.logoBase64}" class="logo" alt="Logo" onload="document.getElementById('btn-print').disabled=false;">`
+    ? `<img src="${ticket.logoBase64}" class="logo" alt="Logo">`
     : `<div class="logo-text">${APP_CONFIG.nombreEmpresa}</div>`;
 
   const itemsHTML = ticket.items.map(item => `
@@ -115,10 +115,11 @@ export function imprimirTicket(ticket) {
       font-weight: bold;
     }
     .btn-print { background: #2e7d32; color: white; }
+    .btn-print:hover { background: #1b5e20; }
     .btn-close { background: #666; color: white; }
-    .btn:disabled { opacity: 0.5; cursor: wait; }
+    .btn-close:hover { background: #444; }
     @media print {
-      .acciones { display: none; }
+      .acciones { display: none !important; }
       body { padding: 0; }
     }
   </style>
@@ -149,15 +150,9 @@ export function imprimirTicket(ticket) {
     <p>¡GRACIAS POR SU PREFERENCIA!</p>
   </div>
   <div class="acciones">
-    <button id="btn-print" class="btn btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
     <button class="btn btn-close" onclick="window.close()">✕ CERRAR</button>
   </div>
-  <script>
-    window.onload = function() {
-      console.log('Ticket renderizado correctamente');
-      document.getElementById('btn-print').disabled = false;
-    };
-  </script>
 </body>
 </html>`;
 
@@ -169,26 +164,14 @@ export function imprimirTicket(ticket) {
     return;
   }
 
-  // Escribir el HTML de forma robusta
+  // Escribir el HTML
   try {
     ventana.document.open();
     ventana.document.write(html);
     ventana.document.close();
+    ventana.focus();
   } catch (error) {
     console.error('Error al escribir el ticket:', error);
     alert('Error al generar el ticket: ' + error.message);
-    return;
   }
-
-  // Auto-imprimir después de que el contenido esté listo
-  setTimeout(() => {
-    try {
-      if (ventana && !ventana.closed) {
-        ventana.focus();
-        ventana.print();
-      }
-    } catch (e) {
-      console.warn('No se pudo auto-imprimir:', e);
-    }
-  }, 800);
 }

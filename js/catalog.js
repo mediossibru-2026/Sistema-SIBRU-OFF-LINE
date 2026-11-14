@@ -20,7 +20,6 @@ export async function buscarProducto(termino) {
     .slice(0, 10);
 }
 
-// Para invalidar la caché cuando el admin edite productos
 export function invalidarCache() {
   cache = null;
 }

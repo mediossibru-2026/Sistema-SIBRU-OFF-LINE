@@ -4,7 +4,7 @@
   grid-template-columns: 1fr 2fr 1fr;
   gap: 20px;
   padding: 20px;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 120px);
 }
 
 .panel-entrada, .panel-carrito, .panel-cobro {
@@ -67,8 +67,9 @@
   border-bottom: 1px solid #eee;
 }
 
-.sugerencia-item:hover {
-  background-color: #f0f8f0;
+.sugerencia-item:hover,
+.sugerencia-item.selected {
+  background-color: #e8f5e9;
 }
 
 .btn-agregar {
@@ -142,9 +143,9 @@
 }
 
 /* Marca de agua en el carrito */
-.carrito-header {
+.panel-carrito {
   position: relative;
-  margin-bottom: 15px;
+  overflow: hidden;
 }
 
 .marca-agua {
@@ -152,32 +153,11 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 200px;
+  width: 250px;
   opacity: 0.08;
   pointer-events: none;
   z-index: 0;
-}
-
-.panel-carrito {
-  position: relative;
-  overflow: hidden;
-}
-
-.panel-carrito::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 300px;
-  height: 300px;
-  background-image: url('https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.05;
-  pointer-events: none;
-  z-index: 0;
+  filter: grayscale(100%);
 }
 
 .tabla-carrito {

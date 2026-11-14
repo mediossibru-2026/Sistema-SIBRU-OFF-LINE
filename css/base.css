@@ -1,0 +1,44 @@
+/* css/base.css */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6f8;
+  color: #333;
+}
+
+.main-header {
+  background-color: #2e7d32; /* Verde SIBRÜ */
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.main-header h1 {
+  font-size: 1.2em;
+}
+
+.header-info {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.header-info select {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: none;
+  font-size: 14px;
+}
+
+.status-online {
+  font-size: 14px;
+  font-weight: bold;
+}

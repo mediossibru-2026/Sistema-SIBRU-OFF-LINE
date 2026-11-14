@@ -13,5 +13,9 @@ export const APP_CONFIG = {
   logoUrl: "https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png",
   folioInicial: 3142,
   terminalId: "caja1",
-  formasPagoDefault: ["Efectivo", "Transferencia", "Tarjeta", "Crédito"]
+  formasPagoDefault: ["Efectivo", "Transferencia", "Tarjeta", "Crédito"],
+  cajeros: [
+    { nombre: "Nyx" },
+    { nombre: "Sarahi" }
+  ]
 };

@@ -1,7 +1,5 @@
 // js/reports.js
-// Importaciones ESM válidas (builds +esm de jsDelivr)
-import { jsPDF } from 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
-import autoTable from 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/+esm';
+// jsPDF y autoTable se cargan como scripts globales en admin.html
 
 export function downloadCSV(filename, rows) {
   const BOM = '\uFEFF';
@@ -43,13 +41,15 @@ export function exportTicketsDetalle(tickets) {
 }
 
 export function exportTicketsPDF(tickets) {
+  const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape', 'mm', 'letter');
+  
   doc.setFontSize(16);
   doc.text('Reporte de Tickets - GRUPO SIBRU', 14, 15);
   doc.setFontSize(10);
   doc.text(`Generado: ${new Date().toLocaleString('es-MX')} | Total: ${tickets.length} tickets`, 14, 22);
 
-  autoTable(doc, {
+  doc.autoTable({
     startY: 28,
     head: [['Folio', 'Fecha', 'Cajero', 'Forma Pago', 'Total']],
     body: tickets.map(t => [
@@ -67,7 +67,9 @@ export function exportTicketsPDF(tickets) {
 }
 
 export function exportTicketsDetallePDF(tickets) {
+  const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape', 'mm', 'letter');
+  
   doc.setFontSize(16);
   doc.text('Reporte Detallado - GRUPO SIBRU', 14, 15);
   doc.setFontSize(10);
@@ -86,7 +88,7 @@ export function exportTicketsDetallePDF(tickets) {
     });
   });
 
-  autoTable(doc, {
+  doc.autoTable({
     startY: 28,
     head: [['Folio','Fecha','Cajero','Pago','Producto','Cantidad','Precio','Importe','Total']],
     body,

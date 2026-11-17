@@ -120,6 +120,7 @@ function setupTicketModule() {
   const btnCsv = document.getElementById('btn-export-csv');
   const btnPdf = document.getElementById('btn-export-pdf');
   const btnDetail = document.getElementById('btn-export-detail');
+  const btnSync = document.getElementById('btn-sync-now');
 
   if (btnSearch) btnSearch.addEventListener('click', applyTicketFilters);
   if (btnApply) btnApply.addEventListener('click', applyTicketFilters);
@@ -142,6 +143,31 @@ function setupTicketModule() {
     if (tickets.length === 0) return alert('No hay tickets para exportar');
     exportTicketsDetallePDF(tickets);
   });
+
+  if (btnSync) {
+    btnSync.addEventListener('click', async () => {
+      btnSync.disabled = true;
+      btnSync.textContent = 'Sincronizando...';
+      try {
+        const { sincronizarAhora } = await import('./sync.js');
+        const res = await sincronizarAhora();
+        await renderTickets();
+        updateKPIs();
+        if (res.error === 'offline') {
+          alert('Sin conexión. Los tickets se enviarán automáticamente al reconectar.');
+        } else if (res.fail > 0) {
+          alert(`Sincronización parcial. Éxito: ${res.ok} | Fallidos: ${res.fail}`);
+        } else {
+          alert(`Sincronización completada. ${res.ok} tickets enviados.`);
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btnSync.disabled = false;
+        btnSync.textContent = 'Sincronizar Ahora';
+      }
+    });
+  }
 }
 
 function setupProductModule() {

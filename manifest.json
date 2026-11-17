@@ -1,0 +1,18 @@
+{
+  "name": "Sistema Off Line - Grupo SIBRÜ",
+  "short_name": "SIBRÜ POS",
+  "description": "Sistema de punto de venta offline para Grupo SIBRÜ",
+  "start_url": "./caja.html",
+  "display": "standalone",
+  "background_color": "#2e7d32",
+  "theme_color": "#2e7d32",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

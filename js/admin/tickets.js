@@ -2,8 +2,17 @@
 import { db } from '../db.js';
 
 export async function renderTickets() {
+  console.log('Renderizando tickets...');
+  
   const tickets = await db.tickets.orderBy('fecha').reverse().toArray();
+  console.log(`Encontrados ${tickets.length} tickets`);
+  
   const tbody = document.getElementById('tickets-body');
+  if (!tbody) {
+    console.error('❌ No se encontró tbody de tickets');
+    return;
+  }
+  
   tbody.innerHTML = '';
 
   tickets.forEach(t => {
@@ -27,36 +36,63 @@ export async function renderTickets() {
 }
 
 function populateFilterSelects(tickets) {
+  console.log('Poblando filtros...');
+  
   const cajeros = [...new Set(tickets.map(t => t.cajeroNombre))];
   const pagos = [...new Set(tickets.map(t => t.formaPago))];
+
+  console.log(`Cajeros encontrados: ${cajeros.length}`);
+  console.log(`Formas de pago encontradas: ${pagos.length}`);
 
   const selCajero = document.getElementById('filter-cashier');
   const selPago = document.getElementById('filter-payment');
 
-  if (selCajero.options.length <= 1) {
+  if (selCajero) {
+    // Mantener la opción "Todos" y agregar cajeros únicos
+    const currentOptions = Array.from(selCajero.options).map(o => o.value);
     cajeros.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c; opt.textContent = c;
-      selCajero.appendChild(opt);
+      if (c && !currentOptions.includes(c)) {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        selCajero.appendChild(opt);
+      }
     });
+    console.log(`✅ Select de cajeros actualizado`);
+  } else {
+    console.warn('⚠️ No se encontró select filter-cashier');
   }
-  if (selPago.options.length <= 1) {
+
+  if (selPago) {
+    const currentOptions = Array.from(selPago.options).map(o => o.value);
     pagos.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
-      selPago.appendChild(opt);
+      if (p && !currentOptions.includes(p)) {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        selPago.appendChild(opt);
+      }
     });
+    console.log(`✅ Select de formas de pago actualizado`);
+  } else {
+    console.warn('⚠️ No se encontró select filter-payment');
   }
 }
 
 export async function getFilteredTickets() {
   let tickets = await db.tickets.orderBy('fecha').reverse().toArray();
 
-  const search = document.getElementById('search-ticket').value.toLowerCase();
-  const from = document.getElementById('filter-date-from').value;
-  const to = document.getElementById('filter-date-to').value;
-  const cashier = document.getElementById('filter-cashier').value;
-  const payment = document.getElementById('filter-payment').value;
+  const searchEl = document.getElementById('search-ticket');
+  const fromEl = document.getElementById('filter-date-from');
+  const toEl = document.getElementById('filter-date-to');
+  const cashierEl = document.getElementById('filter-cashier');
+  const paymentEl = document.getElementById('filter-payment');
+
+  const search = searchEl ? searchEl.value.toLowerCase() : '';
+  const from = fromEl ? fromEl.value : '';
+  const to = toEl ? toEl.value : '';
+  const cashier = cashierEl ? cashierEl.value : '';
+  const payment = paymentEl ? paymentEl.value : '';
 
   if (search) tickets = tickets.filter(t => t.folio.toLowerCase().includes(search));
   if (from) tickets = tickets.filter(t => new Date(t.fecha) >= new Date(from));
@@ -68,8 +104,14 @@ export async function getFilteredTickets() {
 }
 
 export async function applyTicketFilters() {
+  console.log('Aplicando filtros de tickets...');
+  
   const tickets = await getFilteredTickets();
+  console.log(`Tickets filtrados: ${tickets.length}`);
+  
   const tbody = document.getElementById('tickets-body');
+  if (!tbody) return;
+  
   tbody.innerHTML = '';
 
   tickets.forEach(t => {
@@ -89,9 +131,15 @@ export async function applyTicketFilters() {
 }
 
 export function clearTicketFilters() {
-  document.getElementById('search-ticket').value = '';
-  document.getElementById('filter-date-from').value = '';
-  document.getElementById('filter-date-to').value = '';
-  document.getElementById('filter-cashier').value = '';
-  document.getElementById('filter-payment').value = '';
+  const searchEl = document.getElementById('search-ticket');
+  const fromEl = document.getElementById('filter-date-from');
+  const toEl = document.getElementById('filter-date-to');
+  const cashierEl = document.getElementById('filter-cashier');
+  const paymentEl = document.getElementById('filter-payment');
+
+  if (searchEl) searchEl.value = '';
+  if (fromEl) fromEl.value = '';
+  if (toEl) toEl.value = '';
+  if (cashierEl) cashierEl.value = '';
+  if (paymentEl) paymentEl.value = '';
 }

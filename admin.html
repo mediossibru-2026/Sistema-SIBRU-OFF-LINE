@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración - Grupo SIBRÜ</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <header class="main-header">
+    <div class="header-left">
+      <img src="https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png" alt="SIBRÜ" class="header-logo">
+      <h1>Panel de Administración</h1>
+    </div>
+    <div class="header-info">
+      <span id="user-email" class="user-email">Cargando...</span>
+      <a href="caja.html" class="btn-link">Ir a Caja</a>
+      <button id="btn-logout" class="btn-logout">Salir</button>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <button class="nav-tab active" data-module="tickets">Tickets</button>
+    <button class="nav-tab" data-module="products">Productos</button>
+    <button class="nav-tab" data-module="cashiers">Cajeros</button>
+    <button class="nav-tab" data-module="settings">Configuración</button>
+  </nav>
+
+  <main class="admin-container">
+    <!-- KPIs -->
+    <section class="kpi-row">
+      <div class="kpi-card">
+        <span class="kpi-value" id="kpi-total">0</span>
+        <span class="kpi-label">TOTAL TICKETS</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-value" id="kpi-hoy">0</span>
+        <span class="kpi-label">HOY</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-value" id="kpi-monto">$0</span>
+        <span class="kpi-label">MONTO HOY</span>
+      </div>
+      <div class="kpi-card pending">
+        <span class="kpi-value" id="kpi-pending">0</span>
+        <span class="kpi-label">PENDIENTES SYNC</span>
+      </div>
+    </section>
+
+    <!-- MÓDULO TICKETS -->
+    <section class="module" id="module-tickets">
+      <aside class="sidebar">
+        <h3>BUSCAR</h3>
+        <input type="text" id="search-ticket" placeholder="Folio...">
+        <button id="btn-search-ticket" class="btn-primary">Buscar</button>
+
+        <h3>FILTROS</h3>
+        <label>Desde</label>
+        <input type="date" id="filter-date-from">
+        <label>Hasta</label>
+        <input type="date" id="filter-date-to">
+        <label>Cajero</label>
+        <select id="filter-cashier"><option value="">Todos</option></select>
+        <label>Forma de Pago</label>
+        <select id="filter-payment"><option value="">Todas</option></select>
+        <button id="btn-apply-filters" class="btn-primary">Aplicar Filtros</button>
+        <button id="btn-clear-filters" class="btn-secondary">Limpiar</button>
+
+        <h3>EXPORTAR RÁPIDO</h3>
+        <button id="btn-export-csv" class="btn-export csv">CSV Resumido</button>
+        <button id="btn-export-pdf" class="btn-export pdf">PDF Resumido</button>
+        <button id="btn-export-detail" class="btn-export detail">PDF Detallado</button>
+      </aside>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Fecha</th>
+              <th>Cajero</th>
+              <th>Items</th>
+              <th>Forma Pago</th>
+              <th>Total</th>
+              <th>Sync</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MÓDULO PRODUCTOS -->
+    <section class="module hidden" id="module-products">
+      <aside class="sidebar">
+        <h3>BUSCAR</h3>
+        <input type="text" id="search-product" placeholder="Clave o nombre...">
+        <button id="btn-search-product" class="btn-primary">Buscar</button>
+
+        <h3>FILTROS</h3>
+        <label>Línea</label>
+        <select id="filter-line"><option value="">Todas</option></select>
+        <label>Estado</label>
+        <select id="filter-status">
+          <option value="">Todos</option>
+          <option value="true">Activos</option>
+          <option value="false">Pausados</option>
+        </select>
+        <button id="btn-apply-product-filters" class="btn-primary">Aplicar</button>
+        <button id="btn-clear-product-filters" class="btn-secondary">Limpiar</button>
+
+        <h3>ACCIONES</h3>
+        <button id="btn-reload-seed" class="btn-primary">Recargar Catálogo</button>
+        <button id="btn-export-products" class="btn-export csv">Exportar CSV</button>
+      </aside>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Clave</th>
+              <th>Nombre</th>
+              <th>Unidad</th>
+              <th>Línea</th>
+              <th>Clave SAT</th>
+              <th>Precio Sugerido</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="products-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MÓDULO CAJEROS -->
+    <section class="module hidden" id="module-cashiers">
+      <aside class="sidebar">
+        <h3>AGREGAR CAJERO</h3>
+        <input type="text" id="cashier-name" placeholder="Nombre">
+        <input type="email" id="cashier-email" placeholder="Correo">
+        <input type="password" id="cashier-password" placeholder="Contraseña">
+        <button id="btn-add-cashier" class="btn-primary">Agregar</button>
+
+        <h3>EXISTENTES</h3>
+        <div id="cashiers-list" class="cashiers-list"></div>
+      </aside>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="cashiers-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MÓDULO CONFIGURACIÓN -->
+    <section class="module hidden" id="module-settings">
+      <div class="settings-grid">
+        <div class="settings-card">
+          <h3>Folios</h3>
+          <label>Número Actual</label>
+          <input type="number" id="setting-folio" min="1">
+          <button id="btn-save-folio" class="btn-primary">Guardar Folio</button>
+        </div>
+
+        <div class="settings-card">
+          <h3>Formas de Pago</h3>
+          <div id="payment-methods-list" class="payment-list"></div>
+          <div class="add-row">
+            <input type="text" id="new-payment" placeholder="Nueva forma de pago">
+            <button id="btn-add-payment" class="btn-primary">Agregar</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>Logo</h3>
+          <p>URL actual:</p>
+          <input type="text" id="setting-logo-url" readonly>
+          <p class="hint">El logo se convierte a Base64 automáticamente para impresión offline.</p>
+          <button id="btn-regenerate-logo" class="btn-primary">Regenerar Base64</button>
+          <div id="logo-preview" class="logo-preview"></div>
+        </div>
+
+        <div class="settings-card">
+          <h3>Terminal</h3>
+          <label>ID de esta terminal</label>
+          <input type="text" id="setting-terminal" readonly>
+          <p class="hint">Configurado en js/config.js</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/main-admin.js"></script>
+</body>
+</html>

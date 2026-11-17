@@ -8,6 +8,7 @@ import { renderProducts, applyProductFilters, clearProductFilters } from './admi
 import { renderCashiers, addCashier, toggleCashier } from './admin/cashiers.js';
 import { loadSettings, saveFolio, addPaymentMethod, regenerateLogo } from './admin/settings.js';
 import { exportTicketsResumido, exportTicketsPDF, exportTicketsDetallePDF, exportProductosCSV } from './reports.js';
+import { sincronizarAhora } from './sync.js';
 
 console.log('🚀 Admin: Iniciando...');
 

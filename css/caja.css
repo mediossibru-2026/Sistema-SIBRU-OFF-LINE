@@ -235,3 +235,9 @@
   border-radius: 4px; cursor: pointer; font-size: 12px;
 }
 .btn-reimprimir-sm:hover { background: #1565c0; }
+
+.btn-historial-header {
+  background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);
+  padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.btn-historial-header:hover { background: rgba(255,255,255,0.3); }

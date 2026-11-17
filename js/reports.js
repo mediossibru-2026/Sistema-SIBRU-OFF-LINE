@@ -1,6 +1,7 @@
 // js/reports.js
-import { jsPDF } from 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-import autoTable from 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+// Importaciones ESM válidas (builds +esm de jsDelivr)
+import { jsPDF } from 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
+import autoTable from 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/+esm';
 
 export function downloadCSV(filename, rows) {
   const BOM = '\uFEFF';
@@ -42,8 +43,7 @@ export function exportTicketsDetalle(tickets) {
 }
 
 export function exportTicketsPDF(tickets) {
-  const { jsPDF: JsPDF } = window.jspdf;
-  const doc = new JsPDF('landscape', 'mm', 'letter');
+  const doc = new jsPDF('landscape', 'mm', 'letter');
   doc.setFontSize(16);
   doc.text('Reporte de Tickets - GRUPO SIBRU', 14, 15);
   doc.setFontSize(10);
@@ -67,10 +67,9 @@ export function exportTicketsPDF(tickets) {
 }
 
 export function exportTicketsDetallePDF(tickets) {
-  const { jsPDF: JsPDF } = window.jspdf;
-  const doc = new JsPDF('landscape', 'mm', 'letter');
+  const doc = new jsPDF('landscape', 'mm', 'letter');
   doc.setFontSize(16);
-  doc.text('Reporte Detallado - GRUPO SIBRÜ', 14, 15);
+  doc.text('Reporte Detallado - GRUPO SIBRU', 14, 15);
   doc.setFontSize(10);
   doc.text(`Generado: ${new Date().toLocaleString('es-MX')} | ${tickets.length} tickets`, 14, 22);
 

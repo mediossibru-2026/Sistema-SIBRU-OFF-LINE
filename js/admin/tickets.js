@@ -13,7 +13,7 @@ async function getFirestore() {
   return firestoreRef;
 }
 
-async function obtenerTicketsDesdeFirestore() {
+export async function obtenerTicketsDesdeFirestore() {
   try {
     const firestore = await getFirestore();
     const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');

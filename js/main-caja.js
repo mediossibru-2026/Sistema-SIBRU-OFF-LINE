@@ -175,3 +175,85 @@ async function cargarCajerosYFormasPago() {
     selPago.appendChild(opt);
   });
 }
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO DE HISTORIAL EN CAJA
+// ═══════════════════════════════════════════════════════
+
+const modalHistorial = document.getElementById('modal-historial');
+const btnAbrirHistorial = document.getElementById('btn-abrir-historial');
+const btnCerrarHistorial = document.getElementById('btn-cerrar-historial');
+const btnFiltrarHistorial = document.getElementById('btn-filtrar-historial');
+const inputFechaHistorial = document.getElementById('filtro-fecha-historial');
+
+// Establecer fecha de hoy por defecto
+inputFechaHistorial.valueAsDate = new Date();
+
+async function cargarHistorial(fechaStr) {
+  const tbody = document.getElementById('historial-body');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Cargando...</td></tr>';
+
+  const tickets = await db.tickets.toArray();
+  const filtrados = tickets.filter(t => {
+    const fechaTicket = new Date(t.fecha).toISOString().split('T')[0];
+    return fechaTicket === fechaStr;
+  }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)); // Más recientes primero
+
+  tbody.innerHTML = '';
+  if (filtrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">No hay tickets en esta fecha.</td></tr>';
+    return;
+  }
+
+  filtrados.forEach(t => {
+    const hora = new Date(t.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${t.folio}</strong></td>
+      <td>${hora}</td>
+      <td>${t.formaPago}</td>
+      <td><strong>$${t.total.toFixed(2)}</strong></td>
+      <td><button class="btn-reimprimir-sm" onclick="window.reimprimirDesdeHistorial('${t.folio}')">🖨️ Reimprimir</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+if (btnAbrirHistorial) {
+  btnAbrirHistorial.addEventListener('click', () => {
+    modalHistorial.classList.remove('hidden');
+    cargarHistorial(inputFechaHistorial.value);
+  });
+}
+
+if (btnCerrarHistorial) {
+  btnCerrarHistorial.addEventListener('click', () => {
+    modalHistorial.classList.add('hidden');
+  });
+}
+
+if (btnFiltrarHistorial) {
+  btnFiltrarHistorial.addEventListener('click', () => {
+    cargarHistorial(inputFechaHistorial.value);
+  });
+}
+
+// Función global para el botón de reimprimir en el historial
+window.reimprimirDesdeHistorial = async (folio) => {
+  const ticket = await db.tickets.get(folio);
+  if (ticket) {
+    const { imprimirTicket } = await import('./print.js');
+    imprimirTicket(ticket);
+  } else {
+    alert('Ticket no encontrado');
+  }
+};
+
+// Cerrar modal al hacer clic fuera del contenido
+if (modalHistorial) {
+  modalHistorial.addEventListener('click', (e) => {
+    if (e.target === modalHistorial) {
+      modalHistorial.classList.add('hidden');
+    }
+  });
+}

@@ -164,3 +164,14 @@
   position: relative;
   z-index: 1;
 }
+/* Estado offline */
+.status-offline {
+  color: #ff5252;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

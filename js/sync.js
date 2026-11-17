@@ -33,15 +33,25 @@ async function getFirestore() {
   return firestoreRef;
 }
 
-// RESCATE: tickets con synced:false que no están en la cola
-async function rescatarTicketsPendientes() {
+// RESCATE MEJORADO: detecta tickets con synced:false y los encola
+export async function rescatarTicketsPendientes() {
+  console.log('🔍 Iniciando rescate de tickets huérfanos...');
+  
   const tickets = await db.tickets.toArray();
+  console.log(`📋 Total tickets en IndexedDB: ${tickets.length}`);
+  
   const enCola = await db.syncQueue.toArray();
+  console.log(`📋 Total en cola de sincronización: ${enCola.length}`);
+  
   const foliosEnCola = new Set(enCola.map(q => String(q.ticketFolio)));
-
+  console.log(`📋 Folios en cola:`, Array.from(foliosEnCola));
+  
   let rescatados = 0;
   for (const t of tickets) {
+    console.log(`🔎 Revisando ticket ${t.folio}: synced=${t.synced}, enCola=${foliosEnCola.has(String(t.folio))}`);
+    
     if (!t.synced && !foliosEnCola.has(String(t.folio))) {
+      console.log(`🛟 Rescatando ticket ${t.folio}...`);
       await db.syncQueue.add({
         ticketFolio: String(t.folio),
         timestamp: Date.now(),
@@ -50,9 +60,14 @@ async function rescatarTicketsPendientes() {
       rescatados++;
     }
   }
+  
   if (rescatados > 0) {
-    console.log(`🛟 Rescatados ${rescatados} tickets huérfanos a la cola`);
+    console.log(`✅ Rescatados ${rescatados} tickets huérfanos a la cola`);
+  } else {
+    console.log(`ℹ️ No hay tickets huérfanos para rescatar`);
   }
+  
+  return rescatados;
 }
 
 export async function sincronizarAhora() {
@@ -61,17 +76,19 @@ export async function sincronizarAhora() {
     return { ok: 0, fail: 0, error: 'offline' };
   }
 
-  await rescatarTicketsPendientes();
+  // Ejecutar rescate primero
+  const rescatados = await rescatarTicketsPendientes();
+  console.log(`🔄 Rescate completado: ${rescatados} tickets encolados`);
 
   console.log('🔄 Procesando cola de sincronización...');
   let ok = 0, fail = 0;
 
   try {
     const pendientes = await db.syncQueue.where('status').equals('pending').toArray();
-    console.log(`📤 ${pendientes.length} tickets en cola`);
+    console.log(`📤 ${pendientes.length} tickets en cola pendientes`);
 
     if (pendientes.length === 0) {
-      return { ok: 0, fail: 0 };
+      return { ok: 0, fail: 0, rescatados };
     }
 
     const firestore = await getFirestore();
@@ -79,31 +96,36 @@ export async function sincronizarAhora() {
 
     for (const item of pendientes) {
       try {
+        console.log(`📤 Sincronizando ticket ${item.ticketFolio}...`);
         const ticket = await db.tickets.get(item.ticketFolio);
+        
         if (!ticket) {
+          console.warn(`⚠️ Ticket ${item.ticketFolio} no encontrado en IndexedDB, marcando como synced`);
           await db.syncQueue.update(item.id, { status: 'synced', syncedAt: Date.now() });
           continue;
         }
 
+        console.log(`📤 Subiendo ticket ${item.ticketFolio} a Firestore...`);
         await addDoc(collection(firestore, 'tickets'), {
           ...ticket,
           terminalId: ticket.terminalId || 'caja1',
           syncedAt: new Date().toISOString()
         });
 
+        console.log(`✅ Ticket ${item.ticketFolio} subido a Firestore`);
         await db.tickets.update(item.ticketFolio, { synced: true });
         await db.syncQueue.update(item.id, { status: 'synced', syncedAt: Date.now() });
         ok++;
-        console.log(`✅ Ticket ${item.ticketFolio} sincronizado`);
+        console.log(`✅ Ticket ${item.ticketFolio} marcado como synced`);
       } catch (error) {
         fail++;
-        console.error(`❌ Ticket ${item.ticketFolio}:`, error.message);
+        console.error(`❌ Error al sincronizar ticket ${item.ticketFolio}:`, error);
         await db.syncQueue.update(item.id, { status: 'failed', error: error.message });
       }
     }
 
-    console.log(`🏁 Cola completada. Éxito: ${ok} | Fallidos: ${fail}`);
-    return { ok, fail };
+    console.log(`Cola completada. Éxito: ${ok} | Fallidos: ${fail}`);
+    return { ok, fail, rescatados };
   } catch (error) {
     console.error('❌ Error general de sincronización:', error);
     return { ok, fail, error: error.message };
@@ -111,7 +133,7 @@ export async function sincronizarAhora() {
 }
 
 export function initSync() {
-  console.log('🔄 Sistema de sincronización inicializado (v2)');
+  console.log('Sistema de sincronización inicializado (v2)');
   updateStatusIndicator(isOnline);
   if (isOnline) {
     setTimeout(sincronizarAhora, 1500);

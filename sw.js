@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'sibru-offline-v2'; // bump forzado para aplicar sync.js corregido
+const CACHE_NAME = 'sibru-offline-v3';
 const urlsToCache = [
   './',
   './caja.html',

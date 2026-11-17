@@ -5,6 +5,7 @@ import { initDB, db } from './db.js';
 import { buscarProducto } from './catalog.js';
 import { agregarAlCarrito, procesarVenta, renderizarCarrito } from './pos.js';
 import { cargarSeedDesdeExcel } from './seed.js';
+import { initSync } from './sync.js';
 
 const app = initializeApp(firebaseConfig);
 let productoSeleccionado = null;
@@ -13,6 +14,7 @@ let resultadosActuales = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initDB();
+  initSync(); // Inicializar sistema de sincronización
 
   const totalProductos = await db.products.count();
   if (totalProductos === 0) {
@@ -61,7 +63,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Navegación con flechas en el dropdown
   inputBusqueda.addEventListener('keydown', (e) => {
     const items = listaSugerencias.querySelectorAll('.sugerencia-item');
     if (items.length === 0) return;
@@ -97,7 +98,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Botón Agregar explícito
   document.getElementById('btn-agregar').addEventListener('click', (e) => {
     e.preventDefault();
     ejecutarAgregar();

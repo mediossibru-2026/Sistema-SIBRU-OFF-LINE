@@ -72,6 +72,37 @@
     </section>
   </main>
 
+    <!-- Modal de Historial -->
+  <div id="modal-historial" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Historial de Tickets</h3>
+        <button id="btn-cerrar-historial" class="btn-modal-close">✕</button>
+      </div>
+      <div class="modal-filters">
+        <label>Fecha:</label>
+        <input type="date" id="filtro-fecha-historial">
+        <button id="btn-filtrar-historial" class="btn-primary-sm">Filtrar</button>
+      </div>
+      <div class="modal-body">
+        <table class="tabla-historial">
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Hora</th>
+              <th>Forma Pago</th>
+              <th>Total</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="historial-body">
+            <!-- Se llena dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/main-caja.js"></script>
   <script>
     // Registrar Service Worker

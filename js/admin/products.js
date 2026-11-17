@@ -2,8 +2,17 @@
 import { db } from '../db.js';
 
 export async function renderProducts() {
+  console.log('Renderizando productos...');
+  
   const products = await db.products.orderBy('clave').toArray();
+  console.log(`Encontrados ${products.length} productos`);
+  
   const tbody = document.getElementById('products-body');
+  if (!tbody) {
+    console.error('❌ No se encontró tbody de productos');
+    return;
+  }
+  
   tbody.innerHTML = '';
 
   products.forEach(p => {
@@ -23,6 +32,7 @@ export async function renderProducts() {
     tbody.appendChild(tr);
   });
 
+  // Guardar precio al cambiar
   tbody.querySelectorAll('.price-input').forEach(input => {
     input.addEventListener('change', async (e) => {
       const clave = e.target.dataset.clave;
@@ -31,28 +41,38 @@ export async function renderProducts() {
     });
   });
 
+  // Poblar filtro de líneas
   const selLinea = document.getElementById('filter-line');
-  if (selLinea.options.length <= 1) {
+  if (selLinea && selLinea.options.length <= 1) {
     const lineas = [...new Set(products.map(p => p.linea).filter(Boolean))].sort();
     lineas.forEach(l => {
       const opt = document.createElement('option');
-      opt.value = l; opt.textContent = l;
+      opt.value = l;
+      opt.textContent = l;
       selLinea.appendChild(opt);
     });
   }
 }
 
 export async function applyProductFilters() {
+  console.log('Aplicando filtros de productos...');
+  
   let products = await db.products.toArray();
-  const search = document.getElementById('search-product').value.toLowerCase();
-  const linea = document.getElementById('filter-line').value;
-  const status = document.getElementById('filter-status').value;
+  const searchEl = document.getElementById('search-product');
+  const lineaEl = document.getElementById('filter-line');
+  const statusEl = document.getElementById('filter-status');
+
+  const search = searchEl ? searchEl.value.toLowerCase() : '';
+  const linea = lineaEl ? lineaEl.value : '';
+  const status = statusEl ? statusEl.value : '';
 
   if (search) products = products.filter(p => p.clave.includes(search) || p.nombre.toLowerCase().includes(search));
   if (linea) products = products.filter(p => p.linea === linea);
   if (status !== '') products = products.filter(p => String(p.activo) === status);
 
   const tbody = document.getElementById('products-body');
+  if (!tbody) return;
+  
   tbody.innerHTML = '';
 
   products.forEach(p => {
@@ -80,7 +100,11 @@ export async function applyProductFilters() {
 }
 
 export function clearProductFilters() {
-  document.getElementById('search-product').value = '';
-  document.getElementById('filter-line').value = '';
-  document.getElementById('filter-status').value = '';
+  const searchEl = document.getElementById('search-product');
+  const lineaEl = document.getElementById('filter-line');
+  const statusEl = document.getElementById('filter-status');
+
+  if (searchEl) searchEl.value = '';
+  if (lineaEl) lineaEl.value = '';
+  if (statusEl) statusEl.value = '';
 }

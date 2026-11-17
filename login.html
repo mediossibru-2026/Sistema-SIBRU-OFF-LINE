@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Grupo SIBRÜ</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <img src="https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png" alt="SIBRÜ" class="login-logo">
+      <h1>Sistema Off Line</h1>
+      <p class="subtitle">Panel de Administración · Grupo SIBRÜ</p>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="login-email" required autocomplete="email" placeholder="admin@gruposibru.com">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-login">Iniciar Sesión</button>
+        <div id="login-error" class="error-message"></div>
+      </form>
+
+      <div class="login-footer">
+        <a href="caja.html">Ir a Terminal de Caja →</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

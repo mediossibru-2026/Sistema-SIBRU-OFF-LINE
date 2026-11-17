@@ -1,20 +1,17 @@
 // js/sync.js
-// Sistema de sincronización offline → Firestore
 import { db } from './db.js';
 import { firebaseConfig } from './config.js';
 
 let isOnline = navigator.onLine;
+let firestoreRef = null;
 
-// Detectar cambios de conexión
 window.addEventListener('online', () => {
-  console.log('🟢 Sistema en línea');
   isOnline = true;
   updateStatusIndicator(true);
-  procesarColaSync();
+  sincronizarAhora();
 });
 
 window.addEventListener('offline', () => {
-  console.log('🔴 Sistema sin conexión');
   isOnline = false;
   updateStatusIndicator(false);
 });
@@ -27,75 +24,96 @@ function updateStatusIndicator(online) {
   }
 }
 
-// Procesar cola de sincronización
-export async function procesarColaSync() {
+async function getFirestore() {
+  if (firestoreRef) return firestoreRef;
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const app = initializeApp(firebaseConfig);
+  firestoreRef = getFirestore(app);
+  return firestoreRef;
+}
+
+// RESCATE: tickets con synced:false que no están en la cola
+async function rescatarTicketsPendientes() {
+  const tickets = await db.tickets.toArray();
+  const enCola = await db.syncQueue.toArray();
+  const foliosEnCola = new Set(enCola.map(q => String(q.ticketFolio)));
+
+  let rescatados = 0;
+  for (const t of tickets) {
+    if (!t.synced && !foliosEnCola.has(String(t.folio))) {
+      await db.syncQueue.add({
+        ticketFolio: String(t.folio),
+        timestamp: Date.now(),
+        status: 'pending'
+      });
+      rescatados++;
+    }
+  }
+  if (rescatados > 0) {
+    console.log(`🛟 Rescatados ${rescatados} tickets huérfanos a la cola`);
+  }
+}
+
+export async function sincronizarAhora() {
   if (!isOnline) {
-    console.log('⏸️ Sin conexión, cola en pausa');
-    return;
+    console.log('⏸️ Sin conexión, sincronización en pausa');
+    return { ok: 0, fail: 0, error: 'offline' };
   }
 
+  await rescatarTicketsPendientes();
+
   console.log('🔄 Procesando cola de sincronización...');
+  let ok = 0, fail = 0;
 
   try {
-    // Obtener tickets pendientes
-    const pendientes = await db.syncQueue
-      .where('status')
-      .equals('pending')
-      .toArray();
+    const pendientes = await db.syncQueue.where('status').equals('pending').toArray();
+    console.log(`📤 ${pendientes.length} tickets en cola`);
 
-    console.log(`📤 ${pendientes.length} tickets pendientes de sincronizar`);
+    if (pendientes.length === 0) {
+      return { ok: 0, fail: 0 };
+    }
 
-    if (pendientes.length === 0) return;
+    const firestore = await getFirestore();
+    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-    // Inicializar Firestore dinámicamente
-    const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    
-    const app = initializeApp(firebaseConfig);
-    const firestore = getFirestore(app);
-    const { collection, addDoc, updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-
-    // Sincronizar cada ticket
     for (const item of pendientes) {
       try {
         const ticket = await db.tickets.get(item.ticketFolio);
         if (!ticket) {
-          console.warn(`⚠️ Ticket ${item.ticketFolio} no encontrado, marcando como synced`);
           await db.syncQueue.update(item.id, { status: 'synced', syncedAt: Date.now() });
           continue;
         }
 
-        // Subir a Firestore
         await addDoc(collection(firestore, 'tickets'), {
           ...ticket,
-          syncedAt: new Date().toISOString(),
-          terminalId: ticket.terminalId || 'caja1'
+          terminalId: ticket.terminalId || 'caja1',
+          syncedAt: new Date().toISOString()
         });
 
-        // Marcar como sincronizado en IndexedDB
         await db.tickets.update(item.ticketFolio, { synced: true });
         await db.syncQueue.update(item.id, { status: 'synced', syncedAt: Date.now() });
-
+        ok++;
         console.log(`✅ Ticket ${item.ticketFolio} sincronizado`);
       } catch (error) {
-        console.error(`❌ Error al sincronizar ticket ${item.ticketFolio}:`, error);
+        fail++;
+        console.error(`❌ Ticket ${item.ticketFolio}:`, error.message);
         await db.syncQueue.update(item.id, { status: 'failed', error: error.message });
       }
     }
 
-    console.log('✅ Cola de sincronización completada');
+    console.log(`🏁 Cola completada. Éxito: ${ok} | Fallidos: ${fail}`);
+    return { ok, fail };
   } catch (error) {
-    console.error('❌ Error al procesar cola:', error);
+    console.error('❌ Error general de sincronización:', error);
+    return { ok, fail, error: error.message };
   }
 }
 
-// Inicializar al cargar
 export function initSync() {
-  console.log('🔄 Sistema de sincronización inicializado');
+  console.log('🔄 Sistema de sincronización inicializado (v2)');
   updateStatusIndicator(isOnline);
-  
-  // Intentar sincronizar al iniciar si hay conexión
   if (isOnline) {
-    setTimeout(procesarColaSync, 2000); // Esperar 2 segundos para que todo cargue
+    setTimeout(sincronizarAhora, 1500);
   }
 }

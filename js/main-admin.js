@@ -3,7 +3,7 @@ import { auth } from './auth.js';
 import { APP_CONFIG } from './config.js';
 import { initDB, db } from './db.js';
 import { cargarSeedDesdeExcel } from './seed.js';
-import { renderTickets, applyTicketFilters, clearTicketFilters, getFilteredTickets } from './admin/tickets.js';
+import { renderTickets, applyTicketFilters, clearTicketFilters, getFilteredTickets, obtenerTicketsDesdeFirestore } from './admin/tickets.js';
 import { renderProducts, applyProductFilters, clearProductFilters } from './admin/products.js';
 import { renderCashiers, addCashier, toggleCashier } from './admin/cashiers.js';
 import { loadSettings, saveFolio, addPaymentMethod, regenerateLogo } from './admin/settings.js';
@@ -20,19 +20,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✅ DB inicializada');
     
     setupNavigation();
-    console.log('✅ Navegación configurada');
-    
     setupTicketModule();
-    console.log('✅ Módulo tickets configurado');
-    
     setupProductModule();
-    console.log('✅ Módulo productos configurado');
-    
     setupCashierModule();
-    console.log('✅ Módulo cajeros configurado');
-    
     setupSettingsModule();
-    console.log('✅ Módulo configuración configurado');
 
     await loadAllData();
     console.log('✅ Datos cargados');
@@ -45,19 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadAllData() {
   try {
     await renderTickets();
-    console.log('✅ Tickets renderizados');
-    
     await renderProducts();
-    console.log('✅ Productos renderizados');
-    
     await renderCashiers();
-    console.log('✅ Cajeros renderizados');
-    
     await loadSettings();
-    console.log('✅ Configuración cargada');
-    
-    updateKPIs();
-    console.log('✅ KPIs actualizados');
+    await updateKPIs();
   } catch (error) {
     console.error('❌ Error al cargar datos:', error);
   }
@@ -65,11 +47,21 @@ async function loadAllData() {
 
 async function updateKPIs() {
   try {
-    const tickets = await db.tickets.toArray();
+    // TOTAL, HOY y MONTO: fuente de verdad = Firestore
+    const tickets = await obtenerTicketsDesdeFirestore();
     const hoy = new Date().toDateString();
     const ticketsHoy = tickets.filter(t => new Date(t.fecha).toDateString() === hoy);
-    const montoHoy = ticketsHoy.reduce((s, t) => s + t.total, 0);
-    const pending = tickets.filter(t => !t.synced).length;
+    const montoHoy = ticketsHoy.reduce((s, t) => s + (t.total || 0), 0);
+
+    // PENDIENTES SYNC: cola local de ESTA PC (IndexedDB)
+    let pending = 0;
+    try {
+      const pendientes = await db.syncQueue.where('status').equals('pending').toArray();
+      const fallidos = await db.syncQueue.where('status').equals('failed').toArray();
+      pending = pendientes.length + fallidos.length;
+    } catch (e) {
+      pending = 0;
+    }
 
     const kpiTotal = document.getElementById('kpi-total');
     const kpiHoy = document.getElementById('kpi-hoy');
@@ -86,27 +78,18 @@ async function updateKPIs() {
 }
 
 function setupNavigation() {
-  console.log('Configurando navegación...');
   const tabs = document.querySelectorAll('.nav-tab');
-  console.log(`Encontradas ${tabs.length} pestañas`);
   
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      console.log(`Clic en pestaña: ${tab.dataset.module}`);
-      
-      // Remover active de todas las pestañas
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      
-      // Ocultar todos los módulos
       document.querySelectorAll('.module').forEach(m => m.classList.add('hidden'));
       
-      // Mostrar el módulo seleccionado
       const moduleId = `module-${tab.dataset.module}`;
       const moduleEl = document.getElementById(moduleId);
       if (moduleEl) {
         moduleEl.classList.remove('hidden');
-        console.log(`✅ Módulo ${moduleId} mostrado`);
       } else {
         console.error(`❌ No se encontró el módulo ${moduleId}`);
       }
@@ -150,10 +133,9 @@ function setupTicketModule() {
       btnSync.disabled = true;
       btnSync.textContent = 'Sincronizando...';
       try {
-        const { sincronizarAhora } = await import('./sync.js');
         const res = await sincronizarAhora();
         await renderTickets();
-        updateKPIs();
+        await updateKPIs();
         if (res.error === 'offline') {
           alert('Sin conexión. Los tickets se enviarán automáticamente al reconectar.');
         } else if (res.fail > 0) {
@@ -230,7 +212,6 @@ window.toggleProduct = async (clave) => {
   const p = await db.products.get(clave);
   await db.products.update(clave, { activo: !p.activo, updatedAt: new Date().toISOString() });
   await renderProducts();
-  updateKPIs();
 };
 
 window.deleteProduct = async (clave) => {
@@ -245,12 +226,8 @@ window.toggleCashierStatus = async (email) => {
   await renderCashiers();
 };
 
-window.reprintTicket = async (folio) => {
-  const ticket = await db.tickets.get(folio);
-  if (!ticket) return alert('Ticket no encontrado');
-  const { imprimirTicket } = await import('./print.js');
-  imprimirTicket(ticket);
-};
+// NOTA: window.reprintTicket se define en js/admin/tickets.js (lee de Firestore).
+// No se redefine aquí para no sobrescribirlo con la versión de IndexedDB.
 
 window.removePayment = async (idx) => {
   const formas = (await db.settings.get('formasPago'))?.value || APP_CONFIG.formasPagoDefault;
@@ -258,14 +235,14 @@ window.removePayment = async (idx) => {
   await db.settings.put({ key: 'formasPago', value: formas });
   await loadSettings();
 };
+
 // ═══════════════════════════════════════════════════════
 // ATAJOS DE TECLADO GLOBALES
 // ═══════════════════════════════════════════════════════
 
 document.addEventListener('keydown', (e) => {
-  const ctrl = e.ctrlKey || e.metaKey; // meta = Cmd en Mac
+  const ctrl = e.ctrlKey || e.metaKey;
   
-  // Ctrl+Ñ o Ctrl+Shift+F → ir a Formas de Pago
   if (ctrl && (e.key === 'ñ' || e.key === 'Ñ' || (e.shiftKey && e.key.toLowerCase() === 'f'))) {
     e.preventDefault();
     irAFormasDePago();
@@ -275,7 +252,6 @@ document.addEventListener('keydown', (e) => {
 async function irAFormasDePago() {
   console.log('⌨️ Atajo: ir a Formas de Pago');
   
-  // 1. Si no estamos en Configuración, cambiar de pestaña
   const tabConfig = document.querySelector('.nav-tab[data-module="settings"]');
   const moduleConfig = document.getElementById('module-settings');
   
@@ -284,20 +260,15 @@ async function irAFormasDePago() {
     return;
   }
   
-  // Si está oculto, hacer clic en la pestaña
   if (moduleConfig.classList.contains('hidden')) {
     tabConfig.click();
-    // Esperar un tick para que el DOM se actualice
     await new Promise(r => setTimeout(r, 100));
   }
   
-  // 2. Hacer focus en el input de nueva forma de pago
   const inputPago = document.getElementById('new-payment');
   if (inputPago) {
     inputPago.focus();
     inputPago.select();
-    
-    // Feedback visual temporal
     inputPago.style.boxShadow = '0 0 0 3px #ffd54f';
     setTimeout(() => {
       inputPago.style.boxShadow = '';

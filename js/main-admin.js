@@ -231,3 +231,49 @@ window.removePayment = async (idx) => {
   await db.settings.put({ key: 'formasPago', value: formas });
   await loadSettings();
 };
+// ═══════════════════════════════════════════════════════
+// ATAJOS DE TECLADO GLOBALES
+// ═══════════════════════════════════════════════════════
+
+document.addEventListener('keydown', (e) => {
+  const ctrl = e.ctrlKey || e.metaKey; // meta = Cmd en Mac
+  
+  // Ctrl+Ñ o Ctrl+Shift+F → ir a Formas de Pago
+  if (ctrl && (e.key === 'ñ' || e.key === 'Ñ' || (e.shiftKey && e.key.toLowerCase() === 'f'))) {
+    e.preventDefault();
+    irAFormasDePago();
+  }
+});
+
+async function irAFormasDePago() {
+  console.log('⌨️ Atajo: ir a Formas de Pago');
+  
+  // 1. Si no estamos en Configuración, cambiar de pestaña
+  const tabConfig = document.querySelector('.nav-tab[data-module="settings"]');
+  const moduleConfig = document.getElementById('module-settings');
+  
+  if (!tabConfig || !moduleConfig) {
+    console.warn('⚠️ No se encontró el módulo de Configuración');
+    return;
+  }
+  
+  // Si está oculto, hacer clic en la pestaña
+  if (moduleConfig.classList.contains('hidden')) {
+    tabConfig.click();
+    // Esperar un tick para que el DOM se actualice
+    await new Promise(r => setTimeout(r, 100));
+  }
+  
+  // 2. Hacer focus en el input de nueva forma de pago
+  const inputPago = document.getElementById('new-payment');
+  if (inputPago) {
+    inputPago.focus();
+    inputPago.select();
+    
+    // Feedback visual temporal
+    inputPago.style.boxShadow = '0 0 0 3px #ffd54f';
+    setTimeout(() => {
+      inputPago.style.boxShadow = '';
+    }, 800);
+  }
+}

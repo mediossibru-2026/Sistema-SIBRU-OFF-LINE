@@ -1,12 +1,13 @@
 // js/admin/cashiers.js
 import { db } from '../db.js';
-import { auth } from '../auth.js';
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 export async function renderCashiers() {
   const cajeros = (await db.settings.get('cajeros'))?.value || [];
   const tbody = document.getElementById('cashiers-body');
   const listDiv = document.getElementById('cashiers-list');
+  
+  if (!tbody || !listDiv) return;
+  
   tbody.innerHTML = '';
   listDiv.innerHTML = '';
 
@@ -28,28 +29,18 @@ export async function renderCashiers() {
 }
 
 export async function addCashier(nombre, email, password) {
+  // TEMPORAL: Solo guarda en IndexedDB, omite Firebase Auth
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    await auth.signOut();
-
     const cajeros = (await db.settings.get('cajeros'))?.value || [];
+    if (cajeros.find(c => c.email === email)) {
+      alert('El cajero ya existe');
+      return;
+    }
     cajeros.push({ nombre, email, activo: true, role: 'cajero' });
     await db.settings.put({ key: 'cajeros', value: cajeros });
-
-    alert(`Cajero ${nombre} creado exitosamente`);
+    alert(`✅ Cajero "${nombre}" agregado localmente.\n(Nota: La creación en Firebase Auth está pausada hasta resolver la migración).`);
   } catch (error) {
-    if (error.code === 'auth/email-already-in-use') {
-      const cajeros = (await db.settings.get('cajeros'))?.value || [];
-      if (!cajeros.find(c => c.email === email)) {
-        cajeros.push({ nombre, email, activo: true, role: 'cajero' });
-        await db.settings.put({ key: 'cajeros', value: cajeros });
-        alert(`Cajero ${nombre} agregado (usuario ya existía en Firebase)`);
-      } else {
-        alert('El cajero ya existe');
-      }
-    } else {
-      alert('Error: ' + error.message);
-    }
+    alert('Error: ' + error.message);
   }
 }
 

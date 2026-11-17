@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2e7d32">
   <title>Caja - Grupo SIBRÜ</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/caja.css">
 </head>
@@ -20,7 +23,6 @@
   </header>
 
   <main class="caja-container">
-    <!-- Sección de Entrada -->
     <section class="panel-entrada">
       <div class="form-group">
         <label>Producto (Clave o Nombre)</label>
@@ -37,10 +39,9 @@
           <input type="number" id="precio" step="0.01" min="0">
         </div>
       </div>
-      <button id="btn-agregar" class="btn-agregar">AGREGAR (Enter)</button>
+      <button id="btn-agregar" class="btn-agregar">➕ AGREGAR (Enter)</button>
     </section>
 
-    <!-- Sección del Carrito -->
     <section class="panel-carrito">
       <h3>Detalle de Venta</h3>
       <img src="https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png" alt="" class="marca-agua">
@@ -54,12 +55,10 @@
             <th></th>
           </tr>
         </thead>
-        <tbody id="carrito-body">
-        </tbody>
+        <tbody id="carrito-body"></tbody>
       </table>
     </section>
 
-    <!-- Sección de Cobro -->
     <section class="panel-cobro">
       <div class="form-group">
         <label>Forma de Pago</label>
@@ -69,12 +68,25 @@
         <span>TOTAL:</span>
         <span id="total-venta">$0.00</span>
       </div>
-      <button id="btn-cobrar" class="btn-cobrar">COBRAR E IMPRIMIR (F2)</button>
+      <button id="btn-cobrar" class="btn-cobrar">💵 COBRAR E IMPRIMIR (F2)</button>
     </section>
   </main>
 
   <script type="module" src="js/main-caja.js"></script>
   <script>
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((registration) => {
+            console.log('✅ Service Worker registrado:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('❌ Error al registrar Service Worker:', error);
+          });
+      });
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'F2') {
         e.preventDefault();

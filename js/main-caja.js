@@ -78,9 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.key === 'Enter' && indiceSeleccionado >= 0) {
       e.preventDefault();
       const producto = resultadosActuales[indiceSeleccionado];
-      if (producto) {
-        seleccionarProducto(producto);
-      }
+      if (producto) seleccionarProducto(producto);
     }
   });
 
@@ -177,7 +175,7 @@ async function cargarCajerosYFormasPago() {
 }
 
 // ═══════════════════════════════════════════════════════
-// MÓDULO DE HISTORIAL EN CAJA
+// MÓDULO DE HISTORIAL EN CAJA (Lee desde Firestore)
 // ═══════════════════════════════════════════════════════
 
 const modalHistorial = document.getElementById('modal-historial');
@@ -186,37 +184,63 @@ const btnCerrarHistorial = document.getElementById('btn-cerrar-historial');
 const btnFiltrarHistorial = document.getElementById('btn-filtrar-historial');
 const inputFechaHistorial = document.getElementById('filtro-fecha-historial');
 
-// Establecer fecha de hoy por defecto
-inputFechaHistorial.valueAsDate = new Date();
+if (inputFechaHistorial) {
+  inputFechaHistorial.valueAsDate = new Date();
+}
+
+let firestoreRef = null;
+
+async function getFirestore() {
+  if (firestoreRef) return firestoreRef;
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const appFs = initializeApp(firebaseConfig);
+  firestoreRef = getFirestore(appFs);
+  return firestoreRef;
+}
 
 async function cargarHistorial(fechaStr) {
   const tbody = document.getElementById('historial-body');
+  if (!tbody) return;
+  
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Cargando...</td></tr>';
 
-  const tickets = await db.tickets.toArray();
-  const filtrados = tickets.filter(t => {
-    const fechaTicket = new Date(t.fecha).toISOString().split('T')[0];
-    return fechaTicket === fechaStr;
-  }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)); // Más recientes primero
+  try {
+    const firestore = await getFirestore();
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    
+    const snapshot = await getDocs(collection(firestore, 'tickets'));
+    const tickets = snapshot.docs.map(doc => doc.data());
+    
+    console.log(`📥 Historial: ${tickets.length} tickets desde Firestore`);
+    
+    const filtrados = tickets.filter(t => {
+      const fechaTicket = new Date(t.fecha).toISOString().split('T')[0];
+      return fechaTicket === fechaStr;
+    }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-  tbody.innerHTML = '';
-  if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">No hay tickets en esta fecha.</td></tr>';
-    return;
+    tbody.innerHTML = '';
+    if (filtrados.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">No hay tickets en esta fecha.</td></tr>';
+      return;
+    }
+
+    filtrados.forEach(t => {
+      const hora = new Date(t.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${t.folio}</strong></td>
+        <td>${hora}</td>
+        <td>${t.formaPago}</td>
+        <td><strong>$${t.total.toFixed(2)}</strong></td>
+        <td><button class="btn-reimprimir-sm" onclick="window.reimprimirDesdeHistorial('${t.folio}')">🖨️ Reimprimir</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (error) {
+    console.error('❌ Error al cargar historial:', error);
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#c62828">Error al cargar. Revisa tu conexión.</td></tr>';
   }
-
-  filtrados.forEach(t => {
-    const hora = new Date(t.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong>${t.folio}</strong></td>
-      <td>${hora}</td>
-      <td>${t.formaPago}</td>
-      <td><strong>$${t.total.toFixed(2)}</strong></td>
-      <td><button class="btn-reimprimir-sm" onclick="window.reimprimirDesdeHistorial('${t.folio}')">🖨️ Reimprimir</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
 }
 
 if (btnAbrirHistorial) {
@@ -238,18 +262,28 @@ if (btnFiltrarHistorial) {
   });
 }
 
-// Función global para el botón de reimprimir en el historial
 window.reimprimirDesdeHistorial = async (folio) => {
-  const ticket = await db.tickets.get(folio);
-  if (ticket) {
+  try {
+    const firestore = await getFirestore();
+    const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    
+    const q = query(collection(firestore, 'tickets'), where('folio', '==', String(folio)));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      alert('Ticket no encontrado');
+      return;
+    }
+    
+    const ticket = snapshot.docs[0].data();
     const { imprimirTicket } = await import('./print.js');
     imprimirTicket(ticket);
-  } else {
-    alert('Ticket no encontrado');
+  } catch (error) {
+    console.error('Error al reimprimir:', error);
+    alert('Error al reimprimir: ' + error.message);
   }
 };
 
-// Cerrar modal al hacer clic fuera del contenido
 if (modalHistorial) {
   modalHistorial.addEventListener('click', (e) => {
     if (e.target === modalHistorial) {

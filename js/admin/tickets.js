@@ -1,12 +1,40 @@
 // js/admin/tickets.js
 import { db } from '../db.js';
-import { APP_CONFIG } from '../config.js';
+import { firebaseConfig } from '../config.js';
+
+let firestoreRef = null;
+
+async function getFirestore() {
+  if (firestoreRef) return firestoreRef;
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const app = initializeApp(firebaseConfig);
+  firestoreRef = getFirestore(app);
+  return firestoreRef;
+}
+
+async function obtenerTicketsDesdeFirestore() {
+  try {
+    const firestore = await getFirestore();
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    
+    const snapshot = await getDocs(collection(firestore, 'tickets'));
+    const tickets = snapshot.docs.map(doc => doc.data());
+    
+    console.log(`📥 Obtenidos ${tickets.length} tickets desde Firestore`);
+    return tickets;
+  } catch (error) {
+    console.error('❌ Error al obtener tickets desde Firestore:', error);
+    console.log('⚠️ Usando IndexedDB local como fallback');
+    return await db.tickets.toArray();
+  }
+}
 
 export async function renderTickets() {
   console.log('🔄 Renderizando tickets...');
   
-  const tickets = await db.tickets.orderBy('fecha').reverse().toArray();
-  console.log(`📋 Encontrados ${tickets.length} tickets`);
+  const tickets = await obtenerTicketsDesdeFirestore();
+  console.log(`📋 Total tickets: ${tickets.length}`);
   
   const tbody = document.getElementById('tickets-body');
   if (!tbody) {
@@ -19,6 +47,9 @@ export async function renderTickets() {
   if (tickets.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">No hay tickets registrados. Genera el primero desde la caja.</td></tr>';
   } else {
+    // Ordenar por fecha descendente (más recientes primero)
+    tickets.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    
     tickets.forEach(t => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -28,7 +59,7 @@ export async function renderTickets() {
         <td>${t.items ? t.items.length : 0}</td>
         <td>${t.formaPago || '—'}</td>
         <td><strong>$${t.total.toFixed(2)}</strong></td>
-        <td><span class="status-badge ${t.synced ? 'status-synced' : 'status-pending'}">${t.synced ? 'Synced' : 'Pending'}</span></td>
+        <td><span class="status-badge status-synced">Synced</span></td>
         <td>
           <button class="btn-icon success" onclick="window.reprintTicket('${t.folio}')" title="Reimprimir">🖨️</button>
         </td>
@@ -37,7 +68,7 @@ export async function renderTickets() {
     });
   }
 
-  // Poblar filtros con datos de settings + tickets
+  // Poblar filtros
   await populateFilterSelects(tickets);
 }
 
@@ -47,13 +78,12 @@ async function populateFilterSelects(tickets) {
   const selCajero = document.getElementById('filter-cashier');
   const selPago = document.getElementById('filter-payment');
 
-  // 1. CAJEROS: desde la lista registrada en settings + tickets existentes
+  // Cajeros: desde la lista registrada en settings + tickets
   if (selCajero) {
     const cajerosReg = (await db.settings.get('cajeros'))?.value || [];
     const cajerosDeTickets = [...new Set(tickets.map(t => t.cajeroNombre).filter(Boolean))];
     const todosCajeros = [...new Set([...cajerosReg.map(c => c.nombre), ...cajerosDeTickets])].filter(Boolean).sort();
     
-    // Reconstruir el select manteniendo "Todos"
     selCajero.innerHTML = '<option value="">Todos</option>';
     todosCajeros.forEach(c => {
       const opt = document.createElement('option');
@@ -62,12 +92,11 @@ async function populateFilterSelects(tickets) {
       selCajero.appendChild(opt);
     });
     console.log(`✅ Select de cajeros: ${todosCajeros.length} opciones`);
-  } else {
-    console.warn('⚠️ No se encontró select filter-cashier');
   }
 
-  // 2. FORMAS DE PAGO: desde la configuración + tickets existentes
+  // Formas de pago: desde configuración + tickets
   if (selPago) {
+    const { APP_CONFIG } = await import('../config.js');
     const formasConfig = (await db.settings.get('formasPago'))?.value || APP_CONFIG.formasPagoDefault;
     const formasDeTickets = [...new Set(tickets.map(t => t.formaPago).filter(Boolean))];
     const todasFormas = [...new Set([...formasConfig, ...formasDeTickets])].filter(Boolean);
@@ -80,13 +109,11 @@ async function populateFilterSelects(tickets) {
       selPago.appendChild(opt);
     });
     console.log(`✅ Select de formas de pago: ${todasFormas.length} opciones`);
-  } else {
-    console.warn('⚠️ No se encontró select filter-payment');
   }
 }
 
 export async function getFilteredTickets() {
-  let tickets = await db.tickets.orderBy('fecha').reverse().toArray();
+  let tickets = await obtenerTicketsDesdeFirestore();
 
   const searchEl = document.getElementById('search-ticket');
   const fromEl = document.getElementById('filter-date-from');
@@ -132,7 +159,7 @@ export async function applyTicketFilters() {
         <td>${t.items ? t.items.length : 0}</td>
         <td>${t.formaPago || '—'}</td>
         <td><strong>$${t.total.toFixed(2)}</strong></td>
-        <td><span class="status-badge ${t.synced ? 'status-synced' : 'status-pending'}">${t.synced ? 'Synced' : 'Pending'}</span></td>
+        <td><span class="status-badge status-synced">Synced</span></td>
         <td><button class="btn-icon success" onclick="window.reprintTicket('${t.folio}')">🖨️</button></td>
       `;
       tbody.appendChild(tr);
@@ -153,3 +180,26 @@ export function clearTicketFilters() {
   if (cashierEl) cashierEl.value = '';
   if (paymentEl) paymentEl.value = '';
 }
+
+// Función para reimprimir ticket (lee desde Firestore)
+window.reprintTicket = async (folio) => {
+  try {
+    const firestore = await getFirestore();
+    const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    
+    const q = query(collection(firestore, 'tickets'), where('folio', '==', String(folio)));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      alert('Ticket no encontrado en Firestore');
+      return;
+    }
+    
+    const ticket = snapshot.docs[0].data();
+    const { imprimirTicket } = await import('../print.js');
+    imprimirTicket(ticket);
+  } catch (error) {
+    console.error('Error al reimprimir:', error);
+    alert('Error al reimprimir: ' + error.message);
+  }
+};

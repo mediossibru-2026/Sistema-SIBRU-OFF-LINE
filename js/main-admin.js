@@ -9,67 +9,135 @@ import { renderCashiers, addCashier, toggleCashier } from './admin/cashiers.js';
 import { loadSettings, saveFolio, addPaymentMethod, regenerateLogo } from './admin/settings.js';
 import { exportTicketsResumido, exportTicketsPDF, exportTicketsDetallePDF, exportProductosCSV } from './reports.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await initDB();
-  setupNavigation();
-  setupTicketModule();
-  setupProductModule();
-  setupCashierModule();
-  setupSettingsModule();
+console.log('🚀 Admin: Iniciando...');
 
-  await loadAllData();
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('✅ DOM cargado');
+  
+  try {
+    await initDB();
+    console.log('✅ DB inicializada');
+    
+    setupNavigation();
+    console.log('✅ Navegación configurada');
+    
+    setupTicketModule();
+    console.log('✅ Módulo tickets configurado');
+    
+    setupProductModule();
+    console.log('✅ Módulo productos configurado');
+    
+    setupCashierModule();
+    console.log('✅ Módulo cajeros configurado');
+    
+    setupSettingsModule();
+    console.log('✅ Módulo configuración configurado');
+
+    await loadAllData();
+    console.log('✅ Datos cargados');
+  } catch (error) {
+    console.error('❌ Error en inicialización:', error);
+    alert('Error al cargar el panel: ' + error.message);
+  }
 });
 
 async function loadAllData() {
-  await renderTickets();
-  await renderProducts();
-  await renderCashiers();
-  await loadSettings();
-  updateKPIs();
+  try {
+    await renderTickets();
+    console.log('✅ Tickets renderizados');
+    
+    await renderProducts();
+    console.log('✅ Productos renderizados');
+    
+    await renderCashiers();
+    console.log('✅ Cajeros renderizados');
+    
+    await loadSettings();
+    console.log('✅ Configuración cargada');
+    
+    updateKPIs();
+    console.log('✅ KPIs actualizados');
+  } catch (error) {
+    console.error('❌ Error al cargar datos:', error);
+  }
 }
 
 async function updateKPIs() {
-  const tickets = await db.tickets.toArray();
-  const hoy = new Date().toDateString();
-  const ticketsHoy = tickets.filter(t => new Date(t.fecha).toDateString() === hoy);
-  const montoHoy = ticketsHoy.reduce((s, t) => s + t.total, 0);
-  const pending = tickets.filter(t => !t.synced).length;
+  try {
+    const tickets = await db.tickets.toArray();
+    const hoy = new Date().toDateString();
+    const ticketsHoy = tickets.filter(t => new Date(t.fecha).toDateString() === hoy);
+    const montoHoy = ticketsHoy.reduce((s, t) => s + t.total, 0);
+    const pending = tickets.filter(t => !t.synced).length;
 
-  document.getElementById('kpi-total').textContent = tickets.length;
-  document.getElementById('kpi-hoy').textContent = ticketsHoy.length;
-  document.getElementById('kpi-monto').textContent = `$${montoHoy.toFixed(2)}`;
-  document.getElementById('kpi-pending').textContent = pending;
+    const kpiTotal = document.getElementById('kpi-total');
+    const kpiHoy = document.getElementById('kpi-hoy');
+    const kpiMonto = document.getElementById('kpi-monto');
+    const kpiPending = document.getElementById('kpi-pending');
+
+    if (kpiTotal) kpiTotal.textContent = tickets.length;
+    if (kpiHoy) kpiHoy.textContent = ticketsHoy.length;
+    if (kpiMonto) kpiMonto.textContent = `$${montoHoy.toFixed(2)}`;
+    if (kpiPending) kpiPending.textContent = pending;
+  } catch (error) {
+    console.error('Error al actualizar KPIs:', error);
+  }
 }
 
 function setupNavigation() {
-  document.querySelectorAll('.nav-tab').forEach(tab => {
+  console.log('Configurando navegación...');
+  const tabs = document.querySelectorAll('.nav-tab');
+  console.log(`Encontradas ${tabs.length} pestañas`);
+  
+  tabs.forEach(tab => {
     tab.addEventListener('click', () => {
+      console.log(`Clic en pestaña: ${tab.dataset.module}`);
+      
+      // Remover active de todas las pestañas
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.module').forEach(m => m.classList.add('hidden'));
       tab.classList.add('active');
-      document.getElementById(`module-${tab.dataset.module}`).classList.remove('hidden');
+      
+      // Ocultar todos los módulos
+      document.querySelectorAll('.module').forEach(m => m.classList.add('hidden'));
+      
+      // Mostrar el módulo seleccionado
+      const moduleId = `module-${tab.dataset.module}`;
+      const moduleEl = document.getElementById(moduleId);
+      if (moduleEl) {
+        moduleEl.classList.remove('hidden');
+        console.log(`✅ Módulo ${moduleId} mostrado`);
+      } else {
+        console.error(`❌ No se encontró el módulo ${moduleId}`);
+      }
     });
   });
 }
 
 function setupTicketModule() {
-  document.getElementById('btn-search-ticket').addEventListener('click', applyTicketFilters);
-  document.getElementById('btn-apply-filters').addEventListener('click', applyTicketFilters);
-  document.getElementById('btn-clear-filters').addEventListener('click', async () => {
+  const btnSearch = document.getElementById('btn-search-ticket');
+  const btnApply = document.getElementById('btn-apply-filters');
+  const btnClear = document.getElementById('btn-clear-filters');
+  const btnCsv = document.getElementById('btn-export-csv');
+  const btnPdf = document.getElementById('btn-export-pdf');
+  const btnDetail = document.getElementById('btn-export-detail');
+
+  if (btnSearch) btnSearch.addEventListener('click', applyTicketFilters);
+  if (btnApply) btnApply.addEventListener('click', applyTicketFilters);
+  if (btnClear) btnClear.addEventListener('click', async () => {
     clearTicketFilters();
     await renderTickets();
   });
-  document.getElementById('btn-export-csv').addEventListener('click', async () => {
+  if (btnCsv) btnCsv.addEventListener('click', async () => {
     const tickets = await getFilteredTickets();
     if (tickets.length === 0) return alert('No hay tickets para exportar');
     exportTicketsResumido(tickets);
   });
-  document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+  if (btnPdf) btnPdf.addEventListener('click', async () => {
     const tickets = await getFilteredTickets();
     if (tickets.length === 0) return alert('No hay tickets para exportar');
     exportTicketsPDF(tickets);
   });
-  document.getElementById('btn-export-detail').addEventListener('click', async () => {
+  if (btnDetail) btnDetail.addEventListener('click', async () => {
     const tickets = await getFilteredTickets();
     if (tickets.length === 0) return alert('No hay tickets para exportar');
     exportTicketsDetallePDF(tickets);
@@ -77,43 +145,56 @@ function setupTicketModule() {
 }
 
 function setupProductModule() {
-  document.getElementById('btn-search-product').addEventListener('click', applyProductFilters);
-  document.getElementById('btn-apply-product-filters').addEventListener('click', applyProductFilters);
-  document.getElementById('btn-clear-product-filters').addEventListener('click', async () => {
+  const btnSearch = document.getElementById('btn-search-product');
+  const btnApply = document.getElementById('btn-apply-product-filters');
+  const btnClear = document.getElementById('btn-clear-product-filters');
+  const btnReload = document.getElementById('btn-reload-seed');
+  const btnExport = document.getElementById('btn-export-products');
+
+  if (btnSearch) btnSearch.addEventListener('click', applyProductFilters);
+  if (btnApply) btnApply.addEventListener('click', applyProductFilters);
+  if (btnClear) btnClear.addEventListener('click', async () => {
     clearProductFilters();
     await renderProducts();
   });
-  document.getElementById('btn-reload-seed').addEventListener('click', async () => {
+  if (btnReload) btnReload.addEventListener('click', async () => {
     if (confirm('¿Recargar catálogo desde articulos.xlsx? Se conservarán los precios sugeridos editados.')) {
       const n = await cargarSeedDesdeExcel();
       alert(`Catálogo recargado: ${n} productos`);
       await renderProducts();
     }
   });
-  document.getElementById('btn-export-products').addEventListener('click', async () => {
+  if (btnExport) btnExport.addEventListener('click', async () => {
     const products = await db.products.toArray();
     exportProductosCSV(products);
   });
 }
 
 function setupCashierModule() {
-  document.getElementById('btn-add-cashier').addEventListener('click', async () => {
-    const name = document.getElementById('cashier-name').value.trim();
-    const email = document.getElementById('cashier-email').value.trim();
-    const password = document.getElementById('cashier-password').value;
-    if (!name || !email || !password) return alert('Completa todos los campos');
-    await addCashier(name, email, password);
-    document.getElementById('cashier-name').value = '';
-    document.getElementById('cashier-email').value = '';
-    document.getElementById('cashier-password').value = '';
-    await renderCashiers();
-  });
+  const btnAdd = document.getElementById('btn-add-cashier');
+  if (btnAdd) {
+    btnAdd.addEventListener('click', async () => {
+      const name = document.getElementById('cashier-name').value.trim();
+      const email = document.getElementById('cashier-email').value.trim();
+      const password = document.getElementById('cashier-password').value;
+      if (!name || !email || !password) return alert('Completa todos los campos');
+      await addCashier(name, email, password);
+      document.getElementById('cashier-name').value = '';
+      document.getElementById('cashier-email').value = '';
+      document.getElementById('cashier-password').value = '';
+      await renderCashiers();
+    });
+  }
 }
 
 function setupSettingsModule() {
-  document.getElementById('btn-save-folio').addEventListener('click', saveFolio);
-  document.getElementById('btn-add-payment').addEventListener('click', addPaymentMethod);
-  document.getElementById('btn-regenerate-logo').addEventListener('click', regenerateLogo);
+  const btnFolio = document.getElementById('btn-save-folio');
+  const btnPayment = document.getElementById('btn-add-payment');
+  const btnLogo = document.getElementById('btn-regenerate-logo');
+
+  if (btnFolio) btnFolio.addEventListener('click', saveFolio);
+  if (btnPayment) btnPayment.addEventListener('click', addPaymentMethod);
+  if (btnLogo) btnLogo.addEventListener('click', regenerateLogo);
 }
 
 // Funciones globales para onclick en tablas

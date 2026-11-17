@@ -176,12 +176,13 @@ function setupCashierModule() {
     btnAdd.addEventListener('click', async () => {
       const name = document.getElementById('cashier-name').value.trim();
       const email = document.getElementById('cashier-email').value.trim();
-      const password = document.getElementById('cashier-password').value;
-      if (!name || !email || !password) return alert('Completa todos los campos');
-      await addCashier(name, email, password);
+      if (!name) return alert('El nombre es obligatorio');
+      await addCashier(name, email);
       document.getElementById('cashier-name').value = '';
       document.getElementById('cashier-email').value = '';
-      document.getElementById('cashier-password').value = '';
+      if (document.getElementById('cashier-password')) {
+        document.getElementById('cashier-password').value = '';
+      }
       await renderCashiers();
     });
   }

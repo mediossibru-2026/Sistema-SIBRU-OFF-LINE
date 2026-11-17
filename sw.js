@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'sibru-offline-v1';
+const CACHE_NAME = 'sibru-offline-v2'; // bump forzado para aplicar sync.js corregido
 const urlsToCache = [
   './',
   './caja.html',
@@ -29,52 +29,38 @@ const urlsToCache = [
   './manifest.json'
 ];
 
-// Instalar: cachear todos los archivos
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando...');
+  console.log('[SW] Instalando v2...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Cacheando archivos');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
       .catch((err) => console.error('[SW] Error al cachear:', err))
   );
+  self.skipWaiting();
 });
 
-// Activar: limpiar caches viejos
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activando...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Eliminando cache viejo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then((cacheNames) => Promise.all(
+      cacheNames.map((name) => {
+        if (name !== CACHE_NAME) {
+          console.log('[SW] Eliminando cache viejo:', name);
+          return caches.delete(name);
+        }
+      })
+    )).then(() => self.clients.claim())
   );
 });
 
-// Fetch: servir desde cache si no hay internet
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Si está en cache, devolverlo
-        if (response) {
-          return response;
+    caches.match(event.request).then((response) => {
+      if (response) return response;
+      return fetch(event.request).catch(() => {
+        if (event.request.mode === 'navigate') {
+          return caches.match('./caja.html');
         }
-        // Si no, intentar red
-        return fetch(event.request).catch(() => {
-          // Si falla red y no está en cache, devolver página offline
-          if (event.request.mode === 'navigate') {
-            return caches.match('./caja.html');
-          }
-        });
-      })
+      });
+    })
   );
 });

@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'sibru-offline-v3';
+const CACHE_NAME = 'sibru-offline-v4';
 const urlsToCache = [
   './',
   './caja.html',

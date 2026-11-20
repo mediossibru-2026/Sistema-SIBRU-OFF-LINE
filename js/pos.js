@@ -57,7 +57,6 @@ export async function procesarVenta(cajeroNombre, formaPago) {
   }
 
   try {
-    // Generar folio
     const folio = await generarNuevoFolio();
     console.log('🔢 Folio generado:', folio);
     
@@ -76,26 +75,24 @@ export async function procesarVenta(cajeroNombre, formaPago) {
       logoBase64: logoBase64
     };
 
-    console.log('📝 Ticket a guardar:', ticket);
+    console.log('📝 Ticket a guardar:', { folio: ticket.folio, total: ticket.total, items: ticket.items.length });
 
-    // 1. Guardar en IndexedDB
-    await db.tickets.add(ticket);
-    console.log('✅ Ticket guardado en IndexedDB');
+    // ✅ CAMBIO CRÍTICO: put() en lugar de add() — evita ConstraintError
+    await db.tickets.put(ticket);
+    console.log('✅ Ticket guardado en IndexedDB (put)');
 
-    // 2. Agregar a la cola de sincronización
-    const queueEntry = {
+    // Encolar para sincronización (también con put para evitar duplicados)
+    await db.syncQueue.put({
       ticketFolio: ticket.folio,
       timestamp: Date.now(),
       status: 'pending'
-    };
-    console.log('📤 Agregando a syncQueue:', queueEntry);
-    await db.syncQueue.add(queueEntry);
+    });
     console.log('✅ Ticket encolado para sincronización');
 
-    // 3. Imprimir
+    // Imprimir
     imprimirTicket(ticket);
 
-    // 4. Limpiar carrito
+    // Limpiar carrito
     carrito = [];
     renderizarCarrito();
     document.getElementById('busqueda').value = '';

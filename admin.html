@@ -166,13 +166,15 @@
     <!-- MÓDULO CONFIGURACIÓN -->
     <section class="module hidden" id="module-settings">
       <div class="settings-grid">
-        <div class="settings-card">
-          <h3>Folios</h3>
-          <label>Número Actual</label>
-          <input type="number" id="setting-folio" min="1">
-          <button id="btn-save-folio" class="btn-primary">Guardar Folio</button>
-        </div>
-
+<div class="settings-card">
+  <h3>Folios</h3>
+  <label>Prefijo</label>
+  <input type="text" id="setting-prefix" placeholder="Ej: TP (dejar vacío si no aplica)">
+  <label>Número Actual</label>
+  <input type="number" id="setting-folio" min="1">
+  <button id="btn-save-folio" class="btn-primary">Guardar Folio</button>
+  <p class="hint">Ejemplo: Prefijo "TP" + Número "1" = TP-0001</p>
+</div>
         <div class="settings-card">
           <h3>Formas de Pago</h3>
           <div id="payment-methods-list" class="payment-list"></div>

@@ -57,7 +57,7 @@ export async function procesarVenta(cajeroNombre, formaPago) {
   try {
     const folio = await generarNuevoFolio();
     const logoBase64 = await obtenerLogoBase64();
-
+    
     const ticket = {
       folio: folio.toString(),
       fecha: new Date().toISOString(),
@@ -71,17 +71,28 @@ export async function procesarVenta(cajeroNombre, formaPago) {
       logoBase64: logoBase64
     };
 
+    // 1. Guardar en IndexedDB
     await db.tickets.add(ticket);
-    await db.syncQueue.add({ ticketFolio: ticket.folio, timestamp: Date.now(), status: 'pending' });
+    
+    // 2. ✅ CRÍTICO: Agregar a la cola de sincronización
+    await db.syncQueue.add({
+      ticketFolio: ticket.folio,
+      timestamp: Date.now(),
+      status: 'pending'
+    });
 
+    console.log(`✅ Ticket ${ticket.folio} guardado y encolado para sincronización`);
+
+    // 3. Imprimir
     imprimirTicket(ticket);
 
+    // 4. Limpiar carrito
     carrito = [];
     renderizarCarrito();
     document.getElementById('busqueda').value = '';
     document.getElementById('busqueda').focus();
   } catch (error) {
-    console.error('Error al procesar venta:', error);
+    console.error('❌ Error al procesar venta:', error);
     alert('Error al procesar la venta: ' + error.message);
   }
 }

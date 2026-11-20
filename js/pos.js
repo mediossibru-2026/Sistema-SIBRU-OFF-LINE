@@ -49,13 +49,18 @@ export function renderizarCarrito() {
 window.eliminarItem = eliminarDelCarrito;
 
 export async function procesarVenta(cajeroNombre, formaPago) {
+  console.log('🛒 procesarVenta iniciado', { cajeroNombre, formaPago, items: carrito.length });
+  
   if (carrito.length === 0) {
     alert("El carrito está vacío");
     return;
   }
 
   try {
+    // Generar folio
     const folio = await generarNuevoFolio();
+    console.log('🔢 Folio generado:', folio);
+    
     const logoBase64 = await obtenerLogoBase64();
     
     const ticket = {
@@ -71,17 +76,21 @@ export async function procesarVenta(cajeroNombre, formaPago) {
       logoBase64: logoBase64
     };
 
+    console.log('📝 Ticket a guardar:', ticket);
+
     // 1. Guardar en IndexedDB
     await db.tickets.add(ticket);
-    
-    // 2. ✅ CRÍTICO: Agregar a la cola de sincronización
-    await db.syncQueue.add({
+    console.log('✅ Ticket guardado en IndexedDB');
+
+    // 2. Agregar a la cola de sincronización
+    const queueEntry = {
       ticketFolio: ticket.folio,
       timestamp: Date.now(),
       status: 'pending'
-    });
-
-    console.log(`✅ Ticket ${ticket.folio} guardado y encolado para sincronización`);
+    };
+    console.log('📤 Agregando a syncQueue:', queueEntry);
+    await db.syncQueue.add(queueEntry);
+    console.log('✅ Ticket encolado para sincronización');
 
     // 3. Imprimir
     imprimirTicket(ticket);
@@ -91,6 +100,8 @@ export async function procesarVenta(cajeroNombre, formaPago) {
     renderizarCarrito();
     document.getElementById('busqueda').value = '';
     document.getElementById('busqueda').focus();
+    
+    console.log('🎉 Venta completada exitosamente');
   } catch (error) {
     console.error('❌ Error al procesar venta:', error);
     alert('Error al procesar la venta: ' + error.message);

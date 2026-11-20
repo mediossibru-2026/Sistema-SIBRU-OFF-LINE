@@ -6,35 +6,46 @@ export async function generarNuevoFolio() {
   console.log('🔢 Generando nuevo folio...');
   
   try {
-    // Intentar leer el folio actual de settings
     const folioSetting = await db.settings.get('folioActual');
+    const prefixSetting = await db.settings.get('folioPrefix');
+    
     console.log('📋 Folio actual en settings:', folioSetting);
+    console.log('📋 Prefijo en settings:', prefixSetting);
     
     let folioActual;
+    let prefix = '';
     
     if (folioSetting && folioSetting.value) {
       folioActual = folioSetting.value;
       console.log('✅ Usando folio de settings:', folioActual);
     } else {
-      // Si no existe, usar el folio inicial de config
       folioActual = APP_CONFIG.folioInicial;
       console.log('⚠️ No hay folio en settings, usando inicial:', folioActual);
     }
     
-    // Incrementar folio
+    if (prefixSetting && prefixSetting.value) {
+      prefix = prefixSetting.value;
+      console.log('✅ Usando prefijo:', prefix);
+    }
+    
     const nuevoFolio = folioActual;
     const siguienteFolio = folioActual + 1;
     
     console.log('📈 Folio a usar:', nuevoFolio, '| Siguiente:', siguienteFolio);
     
-    // Guardar el siguiente folio para la próxima venta
     await db.settings.put({ key: 'folioActual', value: siguienteFolio });
     console.log('✅ Folio actualizado a:', siguienteFolio);
     
-    return nuevoFolio;
+    // Formatear folio con prefijo y ceros a la izquierda
+    const folioFormateado = prefix 
+      ? `${prefix}-${String(nuevoFolio).padStart(4, '0')}`
+      : String(nuevoFolio);
+    
+    console.log('🎫 Folio formateado:', folioFormateado);
+    
+    return folioFormateado;
   } catch (error) {
     console.error('❌ Error al generar folio:', error);
-    // Fallback: usar folio inicial
-    return APP_CONFIG.folioInicial;
+    return String(APP_CONFIG.folioInicial);
   }
 }

@@ -9,6 +9,7 @@ export const firebaseConfig = {
 };
 
 export const APP_CONFIG = {
+  firebaseConfig: firebaseConfig,
   nombreEmpresa: "GRUPO SIBRÜ",
   logoUrl: "https://res.cloudinary.com/sdhnyr5e/image/upload/v1793814011/Retrato_Google_con_Sonrisa.png",
   folioInicial: 3142,

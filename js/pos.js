@@ -63,7 +63,7 @@ export async function procesarVenta(cajeroNombre, formaPago) {
     const logoBase64 = await obtenerLogoBase64();
     
     const ticket = {
-      folio: folio.toString(),
+      folio: folio,
       fecha: new Date().toISOString(),
       cajeroId: "caja1",
       cajeroNombre: cajeroNombre,

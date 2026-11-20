@@ -5,10 +5,12 @@ import { obtenerLogoBase64 } from '../print.js';
 
 export async function loadSettings() {
   const folio = await db.settings.get('folioActual');
+  const prefix = await db.settings.get('folioPrefix');
   const formas = await db.settings.get('formasPago');
   const logo = await db.settings.get('logoBase64');
 
   document.getElementById('setting-folio').value = folio ? folio.value : APP_CONFIG.folioInicial;
+  document.getElementById('setting-prefix').value = prefix ? prefix.value : '';
   document.getElementById('setting-logo-url').value = APP_CONFIG.logoUrl;
   document.getElementById('setting-terminal').value = APP_CONFIG.terminalId;
 
@@ -32,9 +34,18 @@ function renderPaymentMethods(formas) {
 
 export async function saveFolio() {
   const nuevo = parseInt(document.getElementById('setting-folio').value);
+  const prefix = document.getElementById('setting-prefix').value.trim().toUpperCase();
+  
   if (isNaN(nuevo) || nuevo < 1) return alert('Folio inválido');
+  
   await db.settings.put({ key: 'folioActual', value: nuevo });
-  alert(`Folio actualizado a ${nuevo}`);
+  if (prefix) {
+    await db.settings.put({ key: 'folioPrefix', value: prefix });
+  } else {
+    await db.settings.delete('folioPrefix');
+  }
+  
+  alert(`Folio actualizado a: ${prefix ? prefix + '-' : ''}${nuevo}`);
 }
 
 export async function addPaymentMethod() {
@@ -60,3 +71,10 @@ export async function regenerateLogo() {
     alert('Error: ' + e.message);
   }
 }
+
+window.removePayment = async (idx) => {
+  const formas = (await db.settings.get('formasPago'))?.value || APP_CONFIG.formasPagoDefault;
+  formas.splice(idx, 1);
+  await db.settings.put({ key: 'formasPago', value: formas });
+  await loadSettings();
+};
